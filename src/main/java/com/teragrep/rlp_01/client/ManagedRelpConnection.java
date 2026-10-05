@@ -47,7 +47,7 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
     /**
      * Tries to establish a relp connection indefinitely, on failure awaits a configured interval before retry.
      *
-     * @return number of attempts required to connect
+     * @return number of attempts made, always 1
      */
     @Override
     public long connect() {

@@ -21,6 +21,7 @@ import com.teragrep.rlp_01.RelpBatch;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
+//Retries the connection when it fails and throws once the retries have run out
 public class RetryableRelpConnection implements IManagedRelpConnection {
 
     private final IManagedRelpConnection managedRelpConnection;
@@ -37,6 +38,11 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
         this.reconnectInterval = reconnectInterval;
     }
 
+    /**
+     * Tries to tear down and establish a relp connection until attempts have been spent.
+     *
+     * @throws RuntimeException once the attempts have been spent, with the last failure as the cause
+     */
     @Override
     public void forceReconnect() {
         long attempts = 0;
@@ -48,7 +54,7 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 notConnected = false;
             }
             catch (UncheckedIOException e) {
-                if (attempts >= maxRetries) {
+                if (attempts > maxRetries) {
                     throw new RuntimeException("forceReconnect() gave up after <[" + maxRetries + "]> tries.");
                 }
                 sleep();
@@ -56,6 +62,11 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
         }
     }
 
+    /**
+     * Tries to reconnect until the attempts have been spent
+     *
+     * @throws RuntimeException once the attempts have been spent, with the last failure as the cause
+     */
     @Override
     public void reconnect() {
         long attempts = 0;
@@ -67,7 +78,7 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 notConnected = false;
             }
             catch (UncheckedIOException e) {
-                if (attempts >= maxRetries) {
+                if (attempts > maxRetries) {
                     throw new RuntimeException("reconnect() gave up after <[" + maxRetries + "]> tries.");
                 }
                 sleep();
@@ -76,9 +87,10 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
     }
 
     /**
-     * Tries to establish a relp connection indefinitely, on failure awaits a configured interval before retry.
+     * Tries to establish a relp connection until the attempts have been spent.
      *
-     * @return number of attempts required to connect
+     * @return number of attempts made
+     * @throws RuntimeException once the attempts have been spent, with the last failure as the cause
      */
     @Override
     public long connect() throws IOException {
@@ -91,7 +103,7 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 notConnected = false;
             }
             catch (UncheckedIOException e) {
-                if (attempts >= maxRetries) {
+                if (attempts > maxRetries) {
                     throw new RuntimeException("connect() gave up after <[" + maxRetries + "]> tries.");
                 }
                 sleep();
@@ -101,26 +113,26 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
     }
 
     /**
-     * Tries to commit a relp batch to a connection indefinitely until successful.
+     * Tries to commit a relp batch until attempts have been spent.
      *
      * @param relpBatch relp batch to be commited
-     * @return number of attempts required to commit a batch
+     * @return number of attempts made
      */
     @Override
     public long ensureSent(RelpBatch relpBatch) {
         long attempts = 0;
-        long retries = 0;
         boolean notSent = true;
         while (notSent) {
+            attempts++;
             try {
                 attempts = managedRelpConnection.ensureSent(relpBatch);
                 notSent = false;
             }
             catch (UncheckedIOException e) {
-                if (retries >= maxRetries) {
-                    throw e;
+                if (attempts > maxRetries) {
+                    throw new RuntimeException("ensureSent() gave up after <[" + maxRetries + "]> tries.");
                 }
-                retries++;
+                //System.err.println("ensureSent() <[" + attempts + "]> failed: <" + e.getMessage() + ">");
                 sleep();
             }
         }

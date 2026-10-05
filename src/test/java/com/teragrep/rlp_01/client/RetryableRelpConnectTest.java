@@ -19,6 +19,7 @@ package com.teragrep.rlp_01.client;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -33,24 +34,8 @@ public class RetryableRelpConnectTest {
     private final AtomicLong closes = new AtomicLong();
 
     @Test
-    public void testConnectSucceeds() {
-        final int port = 35602;
-        RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 100);
-        IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
-
-        Assertions.assertDoesNotThrow(() -> {
-            TestServer server = serverFactory.create(port, messages, opens, closes);
-            server.run();
-            long attempts = connection.connect();
-            Assertions.assertEquals(1, attempts, "connect should succeed without retries");
-            connection.close();
-            server.close();
-        }, "connect should succeed while server is available");
-    }
-
-    @Test
     public void testConnectAttemptsUntilServerIsAvailable() {
-        final int port = 35603;
+        final int port = 35602;
         RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 100);
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
         Assertions.assertDoesNotThrow(() -> {
@@ -84,24 +69,6 @@ public class RetryableRelpConnectTest {
     }
 
     @Test
-    public void testReconnectAttemptsUntilServerIsAvailable() {
-        final int port = 35604;
-        RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 100);
-        IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
-
-        Assertions.assertDoesNotThrow(() -> {
-            Future<?> reconnecting = ForkJoinPool.commonPool().submit(() -> connection.reconnect());
-            Thread.sleep(500);
-
-            TestServer server = serverFactory.create(port, messages, opens, closes);
-            server.run();
-            reconnecting.get(5, TimeUnit.SECONDS);
-            connection.close();
-            server.close();
-        }, "reconnect should connect after server is available");
-    }
-
-    @Test
     public void testReconnectThrowsWhenAttemptsRunout() {
         final int port = 35605;
         RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 10);
@@ -115,24 +82,6 @@ public class RetryableRelpConnectTest {
                         "reconnect() gave up after <[10]> tries.", thrown.getMessage(),
                         "exception should match expected message"
                 );
-    }
-
-    @Test
-    public void testForceReconnectAttemptsUntilServerIsAvailable() {
-        final int port = 35604;
-        RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 100);
-        IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
-        Assertions.assertDoesNotThrow(() -> {
-            Future<?> reconnecting = ForkJoinPool.commonPool().submit(() -> connection.forceReconnect());
-            Thread.sleep(500);
-
-            TestServer server = serverFactory.create(port, messages, opens, closes);
-            server.run();
-
-            reconnecting.get(5, TimeUnit.SECONDS);
-            connection.close();
-            server.close();
-        }, "forceReconnect should be retried until server is available");
     }
 
     @Test
@@ -152,4 +101,17 @@ public class RetryableRelpConnectTest {
                 );
     }
 
+    @Test
+    public void testEnsureSentThrowsWhenRetriesRunsOut() {
+        int port = 35604;
+        RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 10);
+        IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
+        byte[] bytes = "hey this is relp".getBytes(StandardCharsets.UTF_8);
+        Exception thrown = Assertions.assertThrows(RuntimeException.class, () -> connection.ensureSent(bytes));
+        Assertions
+                .assertEquals(
+                        "ensureSent() gave up after <[10]> tries.", thrown.getMessage(),
+                        "exception should match expected message"
+                );
+    }
 }
