@@ -54,8 +54,8 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 notConnected = false;
             }
             catch (UncheckedIOException e) {
-                if (attempts > maxRetries) {
-                    throw new RuntimeException("forceReconnect() gave up after <[" + maxRetries + "]> tries.");
+                if (attempts >= maxRetries) {
+                    throw new RuntimeException("forceReconnect() gave up after <[" + maxRetries + "]> tries.", e);
                 }
                 sleep();
             }
@@ -78,8 +78,8 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 notConnected = false;
             }
             catch (UncheckedIOException e) {
-                if (attempts > maxRetries) {
-                    throw new RuntimeException("reconnect() gave up after <[" + maxRetries + "]> tries.");
+                if (attempts >= maxRetries) {
+                    throw new RuntimeException("reconnect() gave up after <[" + maxRetries + "]> tries.", e);
                 }
                 sleep();
             }
@@ -103,8 +103,8 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 notConnected = false;
             }
             catch (UncheckedIOException e) {
-                if (attempts > maxRetries) {
-                    throw new RuntimeException("connect() gave up after <[" + maxRetries + "]> tries.");
+                if (attempts >= maxRetries) {
+                    throw new RuntimeException("connect() gave up after <[" + maxRetries + "]> tries.", e);
                 }
                 sleep();
             }
@@ -116,7 +116,7 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
      * Tries to commit a relp batch until attempts have been spent.
      *
      * @param relpBatch relp batch to be commited
-     * @return number of attempts made
+     * @return number of attempts needed to commit the batch
      */
     @Override
     public long ensureSent(RelpBatch relpBatch) {
@@ -129,10 +129,9 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 notSent = false;
             }
             catch (UncheckedIOException e) {
-                if (attempts > maxRetries) {
-                    throw new RuntimeException("ensureSent() gave up after <[" + maxRetries + "]> tries.");
+                if (attempts >= maxRetries) {
+                    throw new RuntimeException("ensureSent() gave up after <[" + maxRetries + "]> tries.", e);
                 }
-                //System.err.println("ensureSent() <[" + attempts + "]> failed: <" + e.getMessage() + ">");
                 sleep();
             }
         }

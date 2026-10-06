@@ -21,10 +21,13 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class RetryableRelpConnectTest {
+public class RetryableConnectionTest {
 
     private final String hostname = "localhost";
     private final SocketConfig socketConfig = new SocketConfigImpl(1000, 1000, 100, false);
@@ -39,7 +42,7 @@ public class RetryableRelpConnectTest {
         RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 100);
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
         Assertions.assertDoesNotThrow(() -> {
-            Future<Long> connecting = ForkJoinPool.commonPool().submit(() -> connection.connect());
+            Future<Long> connecting = ForkJoinPool.commonPool().submit(connection::connect);
             Thread.sleep(500);
 
             TestServer server = serverFactory.create(port, messages, opens, closes);
@@ -59,7 +62,7 @@ public class RetryableRelpConnectTest {
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
         Exception thrown = Assertions
                 .assertThrows(
-                        RuntimeException.class, () -> connection.connect(), "should throw after reaching max attempts"
+                        RuntimeException.class, connection::connect, "should throw after reaching max attempts"
                 );
         Assertions
                 .assertEquals(
@@ -75,7 +78,7 @@ public class RetryableRelpConnectTest {
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
         RuntimeException thrown = Assertions
                 .assertThrows(
-                        RuntimeException.class, () -> connection.reconnect(), "should throw after reaching max attempts"
+                        RuntimeException.class, connection::reconnect, "should throw after reaching max attempts"
                 );
         Assertions
                 .assertEquals(
@@ -91,7 +94,7 @@ public class RetryableRelpConnectTest {
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
         RuntimeException thrown = Assertions
                 .assertThrows(
-                        RuntimeException.class, () -> connection.forceReconnect(),
+                        RuntimeException.class, connection::forceReconnect,
                         "should throw after reaching max attempts"
                 );
         Assertions
@@ -102,7 +105,7 @@ public class RetryableRelpConnectTest {
     }
 
     @Test
-    public void testEnsureSentThrowsWhenRetriesRunsOut() {
+    public void testEnsureSentThrowsWhenAttemptsRunsOut() {
         int port = 35604;
         RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 10);
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();

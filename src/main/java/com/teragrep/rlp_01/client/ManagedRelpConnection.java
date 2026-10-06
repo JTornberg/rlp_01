@@ -45,7 +45,7 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
     }
 
     /**
-     * Tries to establish a relp connection indefinitely, on failure awaits a configured interval before retry.
+     * Tries to establish a relp connection once.
      *
      * @return number of attempts made, always 1
      */
@@ -106,6 +106,11 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
                 attempts++;
             }
             if (!relpBatch.verifyTransactionAll()) {
+                if (attempts >= relpConnection.relpConfig().maxConnectionAttempts) {
+                    throw new UncheckedIOException(
+                            new IOException("RelpBatch was not acknowledged in <[" + attempts + "]> attempts")
+                    );
+                }
                 relpBatch.retryAllFailed();
                 this.tearDown();
                 this.connect();
