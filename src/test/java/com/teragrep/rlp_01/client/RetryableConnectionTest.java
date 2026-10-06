@@ -61,9 +61,7 @@ public class RetryableConnectionTest {
         RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 10);
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
         Exception thrown = Assertions
-                .assertThrows(
-                        RuntimeException.class, connection::connect, "should throw after reaching max attempts"
-                );
+                .assertThrows(RuntimeException.class, connection::connect, "should throw after reaching max attempts");
         Assertions
                 .assertEquals(
                         "connect() gave up after <[10]> tries.", thrown.getMessage(),
@@ -77,9 +75,7 @@ public class RetryableConnectionTest {
         RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 10);
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
         RuntimeException thrown = Assertions
-                .assertThrows(
-                        RuntimeException.class, connection::reconnect, "should throw after reaching max attempts"
-                );
+                .assertThrows(RuntimeException.class, connection::reconnect, "should throw after reaching max attempts");
         Assertions
                 .assertEquals(
                         "reconnect() gave up after <[10]> tries.", thrown.getMessage(),
@@ -94,8 +90,7 @@ public class RetryableConnectionTest {
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
         RuntimeException thrown = Assertions
                 .assertThrows(
-                        RuntimeException.class, connection::forceReconnect,
-                        "should throw after reaching max attempts"
+                        RuntimeException.class, connection::forceReconnect, "should throw after reaching max attempts"
                 );
         Assertions
                 .assertEquals(

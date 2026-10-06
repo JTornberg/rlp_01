@@ -106,11 +106,6 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
                 attempts++;
             }
             if (!relpBatch.verifyTransactionAll()) {
-                if (attempts >= relpConnection.relpConfig().maxConnectionAttempts) {
-                    throw new UncheckedIOException(
-                            new IOException("RelpBatch was not acknowledged in <[" + attempts + "]> attempts")
-                    );
-                }
                 relpBatch.retryAllFailed();
                 this.tearDown();
                 this.connect();
