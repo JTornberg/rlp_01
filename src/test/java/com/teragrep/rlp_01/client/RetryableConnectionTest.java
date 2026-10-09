@@ -19,6 +19,7 @@ package com.teragrep.rlp_01.client;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -61,10 +62,10 @@ public class RetryableConnectionTest {
         RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 10);
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
         Exception thrown = Assertions
-                .assertThrows(RuntimeException.class, connection::connect, "should throw after reaching max attempts");
+                .assertThrows(IOException.class, connection::connect, "should throw after reaching max attempts");
         Assertions
                 .assertEquals(
-                        "connect() gave up after <[10]> tries.", thrown.getMessage(),
+                        "connect() gave up after <[10]> attempts.", thrown.getMessage(),
                         "exception message should match expected"
                 );
     }
@@ -78,7 +79,7 @@ public class RetryableConnectionTest {
                 .assertThrows(RuntimeException.class, connection::reconnect, "should throw after reaching max attempts");
         Assertions
                 .assertEquals(
-                        "reconnect() gave up after <[10]> tries.", thrown.getMessage(),
+                        "reconnect() gave up after <[10]> attempts.", thrown.getMessage(),
                         "exception should match expected message"
                 );
     }
@@ -94,7 +95,7 @@ public class RetryableConnectionTest {
                 );
         Assertions
                 .assertEquals(
-                        "forceReconnect() gave up after <[10]> tries.", thrown.getMessage(),
+                        "forceReconnect() gave up after <[10]> attempts.", thrown.getMessage(),
                         "exception should match expected message"
                 );
     }
@@ -108,7 +109,7 @@ public class RetryableConnectionTest {
         Exception thrown = Assertions.assertThrows(RuntimeException.class, () -> connection.ensureSent(bytes));
         Assertions
                 .assertEquals(
-                        "ensureSent() gave up after <[10]> tries.", thrown.getMessage(),
+                        "ensureSent() gave up after <[10]> attempts.", thrown.getMessage(),
                         "exception should match expected message"
                 );
     }

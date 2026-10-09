@@ -25,16 +25,16 @@ import java.io.UncheckedIOException;
 public class RetryableRelpConnection implements IManagedRelpConnection {
 
     private final IManagedRelpConnection managedRelpConnection;
-    private final long maxRetries;
+    private final long maxConnectionAttempts;
     private final int reconnectInterval;
 
     public RetryableRelpConnection(
             IManagedRelpConnection managedRelpConnection,
-            long maxRetries,
+            long maxConnectionAttempts,
             int reconnectInterval
     ) {
         this.managedRelpConnection = managedRelpConnection;
-        this.maxRetries = maxRetries;
+        this.maxConnectionAttempts = maxConnectionAttempts;
         this.reconnectInterval = reconnectInterval;
     }
 
@@ -54,8 +54,11 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 notConnected = false;
             }
             catch (UncheckedIOException e) {
-                if (attempts >= maxRetries) {
-                    throw new RuntimeException("forceReconnect() gave up after <[" + maxRetries + "]> tries.", e);
+                if (attempts >= maxConnectionAttempts) {
+                    throw new RuntimeException(
+                            "forceReconnect() gave up after <[" + maxConnectionAttempts + "]> attempts.",
+                            e
+                    );
                 }
                 sleep();
             }
@@ -78,8 +81,11 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 notConnected = false;
             }
             catch (UncheckedIOException e) {
-                if (attempts >= maxRetries) {
-                    throw new RuntimeException("reconnect() gave up after <[" + maxRetries + "]> tries.", e);
+                if (attempts >= maxConnectionAttempts) {
+                    throw new RuntimeException(
+                            "reconnect() gave up after <[" + maxConnectionAttempts + "]> attempts.",
+                            e
+                    );
                 }
                 sleep();
             }
@@ -90,7 +96,7 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
      * Tries to establish a relp connection until the attempts have been spent.
      *
      * @return number of attempts made
-     * @throws RuntimeException once the attempts have been spent, with the last failure as the cause
+     * @throws IOException once the attempts have been spent, with the last failure as the cause
      */
     @Override
     public long connect() throws IOException {
@@ -103,8 +109,8 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 notConnected = false;
             }
             catch (UncheckedIOException e) {
-                if (attempts >= maxRetries) {
-                    throw new RuntimeException("connect() gave up after <[" + maxRetries + "]> tries.", e);
+                if (attempts >= maxConnectionAttempts) {
+                    throw new IOException("connect() gave up after <[" + maxConnectionAttempts + "]> attempts.", e);
                 }
                 sleep();
             }
@@ -129,8 +135,11 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 notSent = false;
             }
             catch (UncheckedIOException e) {
-                if (attempts >= maxRetries) {
-                    throw new RuntimeException("ensureSent() gave up after <[" + maxRetries + "]> tries.", e);
+                if (attempts >= maxConnectionAttempts) {
+                    throw new RuntimeException(
+                            "ensureSent() gave up after <[" + maxConnectionAttempts + "]> attempts.",
+                            e
+                    );
                 }
                 sleep();
             }
