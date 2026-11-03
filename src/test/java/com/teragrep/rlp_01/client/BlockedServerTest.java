@@ -205,7 +205,8 @@ public class BlockedServerTest {
 
         @Override
         public void run() {
-            connection.ensureSent(testString.getBytes(StandardCharsets.UTF_8));
+            Assertions
+                    .assertDoesNotThrow(() -> connection.ensureSent(testString.getBytes(StandardCharsets.UTF_8)), "Calling run should not throw exception.");
         }
     }
 }

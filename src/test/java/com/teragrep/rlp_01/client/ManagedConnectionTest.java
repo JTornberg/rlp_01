@@ -24,6 +24,7 @@ import com.teragrep.poj_01.pool.Pool;
 import com.teragrep.poj_01.pool.UnboundPool;
 import com.teragrep.rlp_01.RelpBatch;
 import com.teragrep.rlp_01.RelpConnection;
+import com.teragrep.rlp_01.client.exceptions.RelpNotAcknowledgedException;
 import com.teragrep.rlp_01.pool.PoolableSupplierFake;
 import com.teragrep.rlp_03.frame.FrameDelegationClockFactory;
 import com.teragrep.rlp_03.frame.delegate.EventDelegate;
@@ -32,7 +33,6 @@ import com.teragrep.rlp_03.frame.delegate.event.RelpEvent;
 import com.teragrep.rlp_03.frame.delegate.event.RelpEventSyslog;
 import org.junit.jupiter.api.*;
 
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -111,7 +111,8 @@ public class ManagedConnectionTest {
 
         String heyRelp = "hey this is relp";
 
-        long attempts = relpConnection.ensureSent(heyRelp.getBytes(StandardCharsets.UTF_8));
+        long attempts = Assertions
+                .assertDoesNotThrow(() -> relpConnection.ensureSent(heyRelp.getBytes(StandardCharsets.UTF_8)));
         Assertions.assertEquals(1, attempts, "there should be one send attempts");
 
         Assertions.assertDoesNotThrow(relpConnection::close);
@@ -137,7 +138,7 @@ public class ManagedConnectionTest {
             ForkJoinPool.commonPool().submit(() -> {
                 IManagedRelpConnection connection = relpConnectionPool.get();
 
-                connection.ensureSent(heyRelp.getBytes(StandardCharsets.UTF_8));
+                Assertions.assertDoesNotThrow(() -> connection.ensureSent(heyRelp.getBytes(StandardCharsets.UTF_8)));
                 relpConnectionPool.offer(connection);
                 countDownLatch.countDown();
             });
@@ -180,7 +181,7 @@ public class ManagedConnectionTest {
                 IManagedRelpConnection connection = relpConnectionPool.get();
 
                 // will set timer to 5 millis
-                connection.ensureSent(heyRelp.getBytes(StandardCharsets.UTF_8));
+                Assertions.assertDoesNotThrow(() -> connection.ensureSent(heyRelp.getBytes(StandardCharsets.UTF_8)));
                 // exceed 5 millis
                 try {
                     Thread.sleep(10);
@@ -231,7 +232,7 @@ public class ManagedConnectionTest {
                 IManagedRelpConnection connection = relpConnectionPool.get();
 
                 // will set timer to 5 millis
-                connection.ensureSent(heyRelp.getBytes(StandardCharsets.UTF_8));
+                Assertions.assertDoesNotThrow(() -> connection.ensureSent(heyRelp.getBytes(StandardCharsets.UTF_8)));
                 // exceed 5 millis
                 try {
                     Thread.sleep(10);
@@ -286,7 +287,7 @@ public class ManagedConnectionTest {
                 IManagedRelpConnection connection = relpConnectionPool.get();
 
                 // will set timer to 5 millis
-                connection.ensureSent(relpBatch);
+                Assertions.assertDoesNotThrow(() -> connection.ensureSent(relpBatch));
 
                 relpConnectionPool.offer(connection);
                 countDownLatch.countDown();
@@ -353,14 +354,14 @@ public class ManagedConnectionTest {
             silentServer.run();
 
             byte[] bytes = "hey this is relp".getBytes(StandardCharsets.UTF_8);
-            UncheckedIOException thrown = Assertions
-                    .assertThrows(UncheckedIOException.class, () -> connection.ensureSent(bytes));
+            RelpNotAcknowledgedException thrown = Assertions
+                    .assertThrows(RelpNotAcknowledgedException.class, () -> connection.ensureSent(bytes));
 
             connection.close();
             silentServer.close();
 
             Assertions.assertEquals(5, silentOpenCounts.get(), "each attempt should be sent on its own session");
-            Assertions.assertEquals("RelpBatch was not acknowledged in <[5]> attempts", thrown.getCause().getMessage());
+            Assertions.assertEquals("RelpBatch was not acknowledged in <[5]> attempts", thrown.getMessage());
         });
     }
 }

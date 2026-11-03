@@ -17,11 +17,12 @@
 package com.teragrep.rlp_01.client;
 
 import com.teragrep.rlp_01.RelpBatch;
+import com.teragrep.rlp_01.client.exceptions.RelpAttemptsExhaustedException;
+import com.teragrep.rlp_01.client.exceptions.RelpException;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 
-//Retries the connection when it fails and throws once the retries have run out
+//Retries the connection when it fails and throws once the attempts have been spent
 public class RetryableRelpConnection implements IManagedRelpConnection {
 
     private final IManagedRelpConnection managedRelpConnection;
@@ -41,10 +42,10 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
     /**
      * Tries to tear down and establish a relp connection until attempts have been spent.
      *
-     * @throws RuntimeException once the attempts have been spent, with the last failure as the cause
+     * @throws RelpAttemptsExhaustedException once the attempts have been spent, with the last failure as the cause
      */
     @Override
-    public void forceReconnect() {
+    public void forceReconnect() throws RelpAttemptsExhaustedException {
         long attempts = 0;
         boolean notConnected = true;
         while (notConnected) {
@@ -53,9 +54,9 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 managedRelpConnection.forceReconnect();
                 notConnected = false;
             }
-            catch (UncheckedIOException e) {
+            catch (RelpException e) {
                 if (attempts >= maxConnectionAttempts) {
-                    throw new RuntimeException(
+                    throw new RelpAttemptsExhaustedException(
                             "forceReconnect() gave up after <[" + maxConnectionAttempts + "]> attempts.",
                             e
                     );
@@ -66,12 +67,12 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
     }
 
     /**
-     * Tries to reconnect until the attempts have been spent
+     * Tries to reconnect until the attempts have been spent.
      *
-     * @throws RuntimeException once the attempts have been spent, with the last failure as the cause
+     * @throws RelpAttemptsExhaustedException once the attempts have been spent, with the last failure as the cause
      */
     @Override
-    public void reconnect() {
+    public void reconnect() throws RelpAttemptsExhaustedException {
         long attempts = 0;
         boolean notConnected = true;
         while (notConnected) {
@@ -80,9 +81,9 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 managedRelpConnection.reconnect();
                 notConnected = false;
             }
-            catch (UncheckedIOException e) {
+            catch (RelpException e) {
                 if (attempts >= maxConnectionAttempts) {
-                    throw new RuntimeException(
+                    throw new RelpAttemptsExhaustedException(
                             "reconnect() gave up after <[" + maxConnectionAttempts + "]> attempts.",
                             e
                     );
@@ -96,10 +97,10 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
      * Tries to establish a relp connection until the attempts have been spent.
      *
      * @return number of attempts made
-     * @throws IOException once the attempts have been spent, with the last failure as the cause
+     * @throws RelpAttemptsExhaustedException once the attempts have been spent, with the last failure as the cause
      */
     @Override
-    public long connect() throws IOException {
+    public long connect() throws RelpAttemptsExhaustedException {
         long attempts = 0;
         boolean notConnected = true;
         while (notConnected) {
@@ -108,9 +109,12 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 managedRelpConnection.connect();
                 notConnected = false;
             }
-            catch (UncheckedIOException e) {
+            catch (RelpException e) {
                 if (attempts >= maxConnectionAttempts) {
-                    throw new IOException("connect() gave up after <[" + maxConnectionAttempts + "]> attempts.", e);
+                    throw new RelpAttemptsExhaustedException(
+                            "connect() gave up after <[" + maxConnectionAttempts + "]> attempts.",
+                            e
+                    );
                 }
                 sleep();
             }
@@ -123,9 +127,10 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
      *
      * @param relpBatch relp batch to be commited
      * @return number of attempts needed to commit the batch
+     * @throws RelpAttemptsExhaustedException once the attempts have been spent, with the last failure as the cause
      */
     @Override
-    public long ensureSent(RelpBatch relpBatch) {
+    public long ensureSent(RelpBatch relpBatch) throws RelpAttemptsExhaustedException {
         long attempts = 0;
         boolean notSent = true;
         while (notSent) {
@@ -134,9 +139,9 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
                 attempts = managedRelpConnection.ensureSent(relpBatch);
                 notSent = false;
             }
-            catch (UncheckedIOException e) {
+            catch (RelpException e) {
                 if (attempts >= maxConnectionAttempts) {
-                    throw new RuntimeException(
+                    throw new RelpAttemptsExhaustedException(
                             "ensureSent() gave up after <[" + maxConnectionAttempts + "]> attempts.",
                             e
                     );
@@ -148,7 +153,7 @@ public class RetryableRelpConnection implements IManagedRelpConnection {
     }
 
     @Override
-    public long ensureSent(byte[] bytes) {
+    public long ensureSent(byte[] bytes) throws RelpAttemptsExhaustedException {
         final RelpBatch relpBatch = new RelpBatch();
         relpBatch.insert(bytes);
         return ensureSent(relpBatch);

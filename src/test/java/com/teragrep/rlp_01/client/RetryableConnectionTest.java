@@ -16,10 +16,10 @@
 */
 package com.teragrep.rlp_01.client;
 
+import com.teragrep.rlp_01.client.exceptions.RelpAttemptsExhaustedException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -61,8 +61,11 @@ public class RetryableConnectionTest {
         final int port = 35603;
         RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 10);
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
-        Exception thrown = Assertions
-                .assertThrows(IOException.class, connection::connect, "should throw after reaching max attempts");
+        RelpAttemptsExhaustedException thrown = Assertions
+                .assertThrows(
+                        RelpAttemptsExhaustedException.class, connection::connect,
+                        "should throw after reaching max attempts"
+                );
         Assertions
                 .assertEquals(
                         "connect() gave up after <[10]> attempts.", thrown.getMessage(),
@@ -75,8 +78,11 @@ public class RetryableConnectionTest {
         final int port = 35605;
         RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 10);
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
-        RuntimeException thrown = Assertions
-                .assertThrows(RuntimeException.class, connection::reconnect, "should throw after reaching max attempts");
+        RelpAttemptsExhaustedException thrown = Assertions
+                .assertThrows(
+                        RelpAttemptsExhaustedException.class, connection::reconnect,
+                        "should throw after reaching max attempts"
+                );
         Assertions
                 .assertEquals(
                         "reconnect() gave up after <[10]> attempts.", thrown.getMessage(),
@@ -89,9 +95,10 @@ public class RetryableConnectionTest {
         final int port = 35607;
         RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 10);
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
-        RuntimeException thrown = Assertions
+        RelpAttemptsExhaustedException thrown = Assertions
                 .assertThrows(
-                        RuntimeException.class, connection::forceReconnect, "should throw after reaching max attempts"
+                        RelpAttemptsExhaustedException.class, connection::forceReconnect,
+                        "should throw after reaching max attempts"
                 );
         Assertions
                 .assertEquals(
@@ -106,7 +113,8 @@ public class RetryableConnectionTest {
         RelpConfig relpConfig = new RelpConfig(hostname, port, 100, 0, false, Duration.ZERO, false, 10);
         IManagedRelpConnection connection = new RelpConnectionFactory(relpConfig, socketConfig).get();
         byte[] bytes = "hey this is relp".getBytes(StandardCharsets.UTF_8);
-        Exception thrown = Assertions.assertThrows(RuntimeException.class, () -> connection.ensureSent(bytes));
+        RelpAttemptsExhaustedException thrown = Assertions
+                .assertThrows(RelpAttemptsExhaustedException.class, () -> connection.ensureSent(bytes));
         Assertions
                 .assertEquals(
                         "ensureSent() gave up after <[10]> attempts.", thrown.getMessage(),

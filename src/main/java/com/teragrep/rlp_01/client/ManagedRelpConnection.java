@@ -17,9 +17,9 @@
 package com.teragrep.rlp_01.client;
 
 import com.teragrep.rlp_01.RelpBatch;
+import com.teragrep.rlp_01.client.exceptions.*;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.concurrent.TimeoutException;
 
 public class ManagedRelpConnection implements IManagedRelpConnection {
@@ -33,13 +33,13 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
     }
 
     @Override
-    public void forceReconnect() {
+    public void forceReconnect() throws RelpException {
         tearDown();
         connect();
     }
 
     @Override
-    public void reconnect() {
+    public void reconnect() throws RelpException {
         close();
         connect();
     }
@@ -48,23 +48,33 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
      * Tries to establish a relp connection once.
      *
      * @return number of attempts made, always 1
+     * @throws RelpTimeoutException     if the connection timed out
+     * @throws RelpConnectionException  if the connection could not be established
+     * @throws RelpNegotiationException if the relp server refused to negotiate the session
      */
     @Override
-    public long connect() {
+    public long connect() throws RelpException {
         boolean connected;
         try {
             connected = relpConnection
                     .connect(relpConnection.relpConfig().relpTarget, relpConnection.relpConfig().relpPort);
         }
+        catch (TimeoutException e) {
+            throw new RelpTimeoutException(
+                    "Timed out connecting to relp server <[" + relpConnection.relpConfig().relpTarget + "]>:<["
+                            + relpConnection.relpConfig().relpPort + "]>",
+                    e
+            );
+        }
         catch (Exception e) {
-            throw new UncheckedIOException(
+            throw new RelpConnectionException(
                     "Failed to connect to relp server <[" + relpConnection.relpConfig().relpTarget + "]>:<["
                             + relpConnection.relpConfig().relpPort + "]> <" + e.getMessage() + ">",
-                    new IOException(e)
+                    e
             );
         }
         if (!connected) {
-            throw new UncheckedIOException(new IOException("Relp server refused to open session"));
+            throw new RelpNegotiationException("Relp server refused to negotiate session");
         }
         this.hasConnected = true;
         return 1;
@@ -81,13 +91,14 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
     }
 
     /**
-     * Tries to commit a relp batch to a connection indefinitely until successful.
+     * Tries to commit a relp batch to a connection indefinitely until successful or the configured attempts are spent.
      *
      * @param relpBatch relp batch to be commited
      * @return number of attempts required to commit a batch
+     * @throws RelpNotAcknowledgedException if the batch was not acknowledged within the configured attempts
      */
     @Override
-    public long ensureSent(RelpBatch relpBatch) {
+    public long ensureSent(RelpBatch relpBatch) throws RelpException {
         // avoid unnecessary exception for fresh connections
         if (!hasConnected) {
             connect();
@@ -96,19 +107,23 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
         boolean notSent = true;
         long attempts = 0;
         while (notSent) {
+            attempts++;
             try {
                 relpConnection.commit(relpBatch);
             }
             catch (IllegalStateException | IOException | TimeoutException e) {
+                if (attempts >= relpConnection.relpConfig().maxSendAttempts) {
+                    throw new RelpNotAcknowledgedException(
+                            "RelpBatch was not acknowledged in <[" + attempts + "]> attempts",
+                            e
+                    );
+                }
                 System.err.println("Exception <" + e.getMessage() + "> while sending relpBatch. Will retry");
-            }
-            finally {
-                attempts++;
             }
             if (!relpBatch.verifyTransactionAll()) {
                 if (attempts >= relpConnection.relpConfig().maxSendAttempts) {
-                    throw new UncheckedIOException(
-                            new IOException("RelpBatch was not acknowledged in <[" + attempts + "]> attempts")
+                    throw new RelpNotAcknowledgedException(
+                            "RelpBatch was not acknowledged in <[" + attempts + "]> attempts"
                     );
                 }
                 relpBatch.retryAllFailed();
@@ -123,7 +138,7 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
     }
 
     @Override
-    public long ensureSent(byte[] bytes) {
+    public long ensureSent(byte[] bytes) throws RelpException {
         final RelpBatch relpBatch = new RelpBatch();
         relpBatch.insert(bytes);
         return ensureSent(relpBatch);
