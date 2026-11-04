@@ -24,7 +24,7 @@ import com.teragrep.poj_01.pool.Pool;
 import com.teragrep.poj_01.pool.UnboundPool;
 import com.teragrep.rlp_01.RelpBatch;
 import com.teragrep.rlp_01.RelpConnection;
-import com.teragrep.rlp_01.client.exceptions.RelpNotAcknowledgedException;
+import com.teragrep.rlp_01.client.exceptions.RelpConnectionException;
 import com.teragrep.rlp_01.pool.PoolableSupplierFake;
 import com.teragrep.rlp_03.frame.FrameDelegationClockFactory;
 import com.teragrep.rlp_03.frame.delegate.EventDelegate;
@@ -354,14 +354,14 @@ public class ManagedConnectionTest {
             silentServer.run();
 
             byte[] bytes = "hey this is relp".getBytes(StandardCharsets.UTF_8);
-            RelpNotAcknowledgedException thrown = Assertions
-                    .assertThrows(RelpNotAcknowledgedException.class, () -> connection.ensureSent(bytes));
+            RelpConnectionException thrown = Assertions
+                    .assertThrows(RelpConnectionException.class, () -> connection.ensureSent(bytes));
 
             connection.close();
             silentServer.close();
 
             Assertions.assertEquals(5, silentOpenCounts.get(), "each attempt should be sent on its own session");
-            Assertions.assertEquals("RelpBatch was not acknowledged in <[5]> attempts", thrown.getMessage());
+            Assertions.assertEquals("Failed to send relpBatch in <[5]> attempts", thrown.getMessage());
         });
     }
 }

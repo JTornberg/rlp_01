@@ -96,6 +96,8 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
      * @param relpBatch relp batch to be commited
      * @return number of attempts required to commit a batch
      * @throws RelpNotAcknowledgedException if the batch was not acknowledged within the configured attempts
+     * @throws RelpTimeoutException if sending timed out within the configured attempts
+     * @throws RelpConnectionException if sending failed within the configured attempts
      */
     @Override
     public long ensureSent(RelpBatch relpBatch) throws RelpException {
@@ -111,12 +113,21 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
             try {
                 relpConnection.commit(relpBatch);
             }
-            catch (IllegalStateException | IOException | TimeoutException e) {
+            catch (IllegalStateException e) {
+                System.err.println("Exception <" + e.getMessage() + "> while sending relpBatch. Will retry");
+                relpBatch.retryAllFailed();
+                this.tearDown();
+                this.connect();
+            }
+            catch (TimeoutException e) {
                 if (attempts >= relpConnection.relpConfig().maxSendAttempts) {
-                    throw new RelpNotAcknowledgedException(
-                            "RelpBatch was not acknowledged in <[" + attempts + "]> attempts",
-                            e
-                    );
+                    throw new RelpTimeoutException("Timed out sending relpBatch in <[" + attempts + "]> attempts", e);
+                }
+                System.err.println("Exception <" + e.getMessage() + "> while sending relpBatch. Will retry");
+            }
+            catch (IOException e) {
+                if (attempts >= relpConnection.relpConfig().maxSendAttempts) {
+                    throw new RelpConnectionException("Failed to send relpBatch in <[" + attempts + "]> attempts", e);
                 }
                 System.err.println("Exception <" + e.getMessage() + "> while sending relpBatch. Will retry");
             }

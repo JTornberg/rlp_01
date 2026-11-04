@@ -22,27 +22,27 @@ public class ManagedRelpConnectionStub implements IManagedRelpConnection {
 
     @Override
     public void reconnect() {
-        throw new IllegalStateException("ManagedRelpConnectionStub does not support this");
+        throw new UnsupportedOperationException("ManagedRelpConnectionStub does not support this");
     }
 
     @Override
     public long connect() {
-        throw new IllegalStateException("ManagedRelpConnectionStub does not support this");
+        throw new UnsupportedOperationException("ManagedRelpConnectionStub does not support this");
     }
 
     @Override
     public void forceReconnect() {
-        throw new IllegalStateException("ManagedRelpConnectionStub does not support this");
+        throw new UnsupportedOperationException("ManagedRelpConnectionStub does not support this");
     }
 
     @Override
     public long ensureSent(byte[] bytes) {
-        throw new IllegalStateException("ManagedRelpConnectionStub does not support this");
+        throw new UnsupportedOperationException("ManagedRelpConnectionStub does not support this");
     }
 
     @Override
     public long ensureSent(RelpBatch relpBatch) {
-        throw new IllegalStateException("ManagedRelpConnectionStub does not support this");
+        throw new UnsupportedOperationException("ManagedRelpConnectionStub does not support this");
     }
 
     @Override
@@ -52,6 +52,6 @@ public class ManagedRelpConnectionStub implements IManagedRelpConnection {
 
     @Override
     public void close() {
-        throw new IllegalStateException("ManagedRelpConnectionStub does not support this");
+        throw new UnsupportedOperationException("ManagedRelpConnectionStub does not support this");
     }
 }
