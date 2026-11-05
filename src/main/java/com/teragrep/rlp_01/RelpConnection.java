@@ -155,10 +155,6 @@ public class RelpConnection implements RelpSender {
         return openSuccess;
     }
 
-    public boolean isOpen() {
-        return state == RelpConnectionState.OPEN;
-    }
-
     public void tearDown() {
         try {
             relpClientSocket.close();

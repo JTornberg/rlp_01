@@ -25,9 +25,11 @@ import java.util.concurrent.TimeoutException;
 public class ManagedRelpConnection implements IManagedRelpConnection {
 
     private final IRelpConnection relpConnection;
+    private boolean hasConnected;
 
     public ManagedRelpConnection(IRelpConnection relpConnection) {
         this.relpConnection = relpConnection;
+        this.hasConnected = false;
     }
 
     @Override
@@ -74,11 +76,18 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
         if (!connected) {
             throw new RelpNegotiationException("Relp server refused to negotiate session");
         }
+        this.hasConnected = true;
         return 1;
     }
 
     private void tearDown() {
-        relpConnection.tearDown();
+        /*
+         TODO remove: wouldn't need a check hasConnected but there is a bug in RLP-01 tearDown()
+         see https://github.com/teragrep/rlp_01/issues/63 for further info
+         */
+        if (hasConnected) {
+            relpConnection.tearDown();
+        }
     }
 
     /**
@@ -93,7 +102,7 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
     @Override
     public long ensureSent(RelpBatch relpBatch) throws RelpException {
         // avoid unnecessary exception for fresh connections
-        if (!relpConnection.isOpen()) {
+        if (!hasConnected) {
             connect();
         }
 

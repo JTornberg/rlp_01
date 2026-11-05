@@ -93,11 +93,6 @@ public class RelpConnectionWithConfig implements IRelpConnection {
     }
 
     @Override
-    public boolean isOpen() {
-        return relpConnection.isOpen();
-    }
-
-    @Override
     public void tearDown() {
         relpConnection.tearDown();
     }

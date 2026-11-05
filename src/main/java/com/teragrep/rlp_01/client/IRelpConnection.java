@@ -48,8 +48,6 @@ public interface IRelpConnection {
 
     boolean connect(String hostname, int port) throws IOException, IllegalStateException, TimeoutException;
 
-    boolean isOpen();
-
     void tearDown();
 
     boolean disconnect() throws IOException, IllegalStateException, TimeoutException;

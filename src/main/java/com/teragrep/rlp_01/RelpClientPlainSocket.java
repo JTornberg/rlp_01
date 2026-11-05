@@ -146,12 +146,8 @@ class RelpClientPlainSocket extends RelpClientSocket {
 
     @Override
     void close() throws IOException {
-        if (socketChannel != null) {
-            socketChannel.close();
-        }
-        if (poll != null) {
-            poll.close();
-        }
+        socketChannel.close();
+        poll.close();
     }
 
     @Override
