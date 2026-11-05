@@ -25,11 +25,9 @@ import java.util.concurrent.TimeoutException;
 public class ManagedRelpConnection implements IManagedRelpConnection {
 
     private final IRelpConnection relpConnection;
-    private boolean hasConnected;
 
     public ManagedRelpConnection(IRelpConnection relpConnection) {
         this.relpConnection = relpConnection;
-        this.hasConnected = false;
     }
 
     @Override
@@ -76,18 +74,11 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
         if (!connected) {
             throw new RelpNegotiationException("Relp server refused to negotiate session");
         }
-        this.hasConnected = true;
         return 1;
     }
 
     private void tearDown() {
-        /*
-         TODO remove: wouldn't need a check hasConnected but there is a bug in RLP-01 tearDown()
-         see https://github.com/teragrep/rlp_01/issues/63 for further info
-         */
-        if (hasConnected) {
-            relpConnection.tearDown();
-        }
+        relpConnection.tearDown();
     }
 
     /**
@@ -96,13 +87,13 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
      * @param relpBatch relp batch to be commited
      * @return number of attempts required to commit a batch
      * @throws RelpNotAcknowledgedException if the batch was not acknowledged within the configured attempts
-     * @throws RelpTimeoutException if sending timed out within the configured attempts
-     * @throws RelpConnectionException if sending failed within the configured attempts
+     * @throws RelpTimeoutException         if sending timed out within the configured attempts
+     * @throws RelpConnectionException      if sending failed within the configured attempts
      */
     @Override
     public long ensureSent(RelpBatch relpBatch) throws RelpException {
         // avoid unnecessary exception for fresh connections
-        if (!hasConnected) {
+        if (!relpConnection.isOpen()) {
             connect();
         }
 
@@ -118,6 +109,7 @@ public class ManagedRelpConnection implements IManagedRelpConnection {
                 relpBatch.retryAllFailed();
                 this.tearDown();
                 this.connect();
+                continue;
             }
             catch (TimeoutException e) {
                 if (attempts >= relpConnection.relpConfig().maxSendAttempts) {
